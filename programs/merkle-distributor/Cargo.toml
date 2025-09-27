@@ -25,3 +25,4 @@ bytemuck = { workspace = true }
 jito-merkle-verify = { path = "../../verify" }
 solana-security-txt = "1.1.1"
 num_enum = "0.7.0"
+static_assertions = "1.1.0"

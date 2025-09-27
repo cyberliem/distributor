@@ -22,7 +22,7 @@ pub fn process_claim_from_api(args: &Args, claim_args: &ClaimFromApiArgs) {
 
     let distributor = Pubkey::from_str(&kv_proof.merkle_tree).unwrap();
 
-    let (claim_status_pda, _bump) = get_claim_status_pda(&args.program_id, &claimant, &distributor);
+    // let (claim_status_pda, _bump) = get_claim_status_pda(&args.program_id, &claimant, &distributor);
 
     let client = RpcClient::new_with_commitment(&args.rpc_url, CommitmentConfig::confirmed());
 
@@ -51,15 +51,14 @@ pub fn process_claim_from_api(args: &Args, claim_args: &ClaimFromApiArgs) {
         program_id: args.program_id,
         accounts: merkle_distributor::accounts::NewClaim {
             distributor,
-            claim_status: claim_status_pda,
             from: get_associated_token_address(&distributor, &args.mint),
             to: claimant_ata,
             claimant,
             token_program: token::ID,
-            system_program: solana_program::system_program::ID,
         }
         .to_account_metas(None),
         data: merkle_distributor::instruction::NewClaim {
+            index: kv_proof.index,
             amount_unlocked: kv_proof.amount,
             amount_locked: kv_proof.locked_amount,
             proof: kv_proof.proof,

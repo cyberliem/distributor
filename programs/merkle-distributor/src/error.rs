@@ -47,4 +47,8 @@ pub enum ErrorCode {
     CannotCloseClaimStatus,
     #[msg("Invalid activation type")]
     InvalidActivationType,
+    #[msg("Claim index out of range")]
+    IndexOutOfRange,
+    #[msg("Already claimed")]
+    AlreadyClaimed,
 }

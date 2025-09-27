@@ -5,7 +5,7 @@ use anchor_lang::{
     prelude::{Pubkey, *},
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-
+use static_assertions::const_assert;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 /// Type of the activation
@@ -14,9 +14,59 @@ pub enum ActivationType {
     Timestamp,
 }
 
+use bytemuck::{Pod, Zeroable};
+
+pub const MAX_NUM_NODES: u32 = 12_000;
+pub const BITMAP_BYTES: usize = ((MAX_NUM_NODES as usize) + 7) / 8;
+// bytes to add so (base + BITMAP_BYTES + pad) % 8 == 0
+pub const BITMAP_TAIL_PAD: usize = (8 - (BITMAP_BYTES % 8)) % 8;
+
+pub const BITMAP_LEN: usize = 1500;
+
+// Hack: making sure the fixed length is correct
+const_assert!(BITMAP_LEN== BITMAP_BYTES);
+
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, AnchorSerialize, AnchorDeserialize)]
+pub struct ClaimedBitmap {
+    pub bytes: [u8; BITMAP_LEN],
+}
+
+// SAFETY: plain byte array
+unsafe impl Zeroable for ClaimedBitmap {}
+unsafe impl Pod for ClaimedBitmap {}
+
+// (optional) if you use InitSpace math anywhere
+impl anchor_lang::Space for ClaimedBitmap {
+    const INIT_SPACE: usize = BITMAP_LEN;
+}
+
+// small helpers so call sites stay tidy
+impl Default for ClaimedBitmap {
+    fn default() -> Self { Self { bytes: [0u8; BITMAP_LEN] } }
+}
+impl ClaimedBitmap {
+    #[inline]
+    pub fn is_set(&self, idx: u32) -> bool {
+        let i = idx as usize;
+        let b = i / 8;
+        let bit = (i % 8) as u8;
+        (self.bytes[b] & (1 << bit)) != 0
+    }
+    #[inline]
+    pub fn set(&mut self, idx: u32) {
+        let i = idx as usize;
+        let b = i / 8;
+        let bit = (i % 8) as u8;
+        self.bytes[b] |= 1 << bit;
+    }
+}
+
 /// State for the account which distributes tokens.
 #[account]
-#[derive(Default, Debug)]
+#[repr(C)]
+#[derive(Debug, InitSpace)]
 pub struct MerkleDistributor {
     /// Bump seed.
     pub bump: u8,
@@ -58,15 +108,32 @@ pub struct MerkleDistributor {
     pub airdrop_bonus: AirdropBonus,
     /// activation type, 0 means slot, 1 means timestamp
     pub activation_type: u8,
-    /// Buffer 0
-    pub buffer_0: [u8; 7],
-    /// Buffer 1
-    pub buffer_1: [u8; 32],
-    /// Buffer 2
-    pub buffer_2: [u8; 32],
+    // padding 2
+    pub padding_2: [u64; 10],
+    // The bitmap: 1 bit per index
+    pub claimed_bitmap: ClaimedBitmap, //TODO: IDL cannot regconize BITMAP_BYTES, need to find a way to work around this
+    pub _tail_pad: [u8; 4],   // this is to by pass the transmute
+    // /// Buffer 0
+    // pub buffer_0: [u8; 7],
+    // /// Buffer 1
+    // pub buffer_1: [u8; 32],
+    // /// Buffer 2
+    // pub buffer_2: [u8; 32],
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, Default)]
+// Manual Default: zero-initialize the POD struct (safe for zero_copy layouts)
+impl Default for MerkleDistributor {
+    fn default() -> Self {
+        // All fields are plain integers / arrays / Pubkey; zeroed is valid
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+const_assert!(core::mem::align_of::<MerkleDistributor>() == 8);
+
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, Default,InitSpace)]
+#[repr(C)]
 pub struct AirdropBonus {
     /// total bonus
     pub total_bonus: u64,
@@ -151,6 +218,8 @@ impl MerkleDistributor {
         let max_bonus = self.get_max_bonus_for_a_claimant(unlocked_amount)?;
         activation_handler.get_bonus_for_a_claimaint(max_bonus)
     }
+    #[inline] pub fn bitmap_is_set(&self, idx: u32) -> bool { self.claimed_bitmap.is_set(idx) }
+    #[inline] pub fn bitmap_set(&mut self, idx: u32) { self.claimed_bitmap.set(idx) }
 }
 
 impl MerkleDistributor {
