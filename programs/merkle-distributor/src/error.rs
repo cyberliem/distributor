@@ -3,8 +3,6 @@ use anchor_lang::error_code;
 /// Error codes.
 #[error_code]
 pub enum ErrorCode {
-    #[msg("Insufficient unlocked tokens")]
-    InsufficientUnlockedTokens,
     #[msg("Deposit Start too far in future")]
     StartTooFarInFuture,
     #[msg("Invalid Merkle proof.")]
@@ -43,8 +41,6 @@ pub enum ErrorCode {
     ClaimingIsNotStarted,
     #[msg("Cannot close distributor")]
     CannotCloseDistributor,
-    #[msg("Cannot close claim status")]
-    CannotCloseClaimStatus,
     #[msg("Invalid activation type")]
     InvalidActivationType,
     #[msg("Claim index out of range")]

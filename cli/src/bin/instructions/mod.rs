@@ -1,6 +1,4 @@
-pub mod process_claim;
 pub mod process_new_claim;
-pub use process_claim::*;
 pub use process_new_claim::*;
 pub mod proccess_close_distribitor;
 pub use proccess_close_distribitor::*;
@@ -30,8 +28,6 @@ pub mod process_filter_list;
 pub use process_filter_list::*;
 pub mod process_get_slot;
 pub use process_get_slot::*;
-pub mod process_close_claim_status;
-pub use process_close_claim_status::*;
 pub mod process_filter_and_merge;
 pub use process_filter_and_merge::*;
 pub mod process_generate_kv_proof;

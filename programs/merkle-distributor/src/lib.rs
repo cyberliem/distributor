@@ -110,12 +110,6 @@ pub mod merkle_distributor {
     pub fn close_distributor(ctx: Context<CloseDistributor>) -> Result<()> {
         handle_close_distributor(ctx)
     }
-    /// only available in test phase
-    #[allow(clippy::result_large_err)]
-    pub fn close_claim_status(ctx: Context<CloseClaimStatus>) -> Result<()> {
-        handle_close_status(ctx)
-    }
-
     #[allow(clippy::result_large_err)]
     pub fn set_activation_point(
         ctx: Context<SetActivationPoint>,
@@ -133,11 +127,6 @@ pub mod merkle_distributor {
         proof: Vec<[u8; 32]>,
     ) -> Result<()> {
         handle_new_claim(ctx, index, amount_unlocked, amount_locked, proof)
-    }
-
-    #[allow(clippy::result_large_err)]
-    pub fn claim_locked(ctx: Context<ClaimLocked>) -> Result<()> {
-        handle_claim_locked(ctx)
     }
 
     #[allow(clippy::result_large_err)]

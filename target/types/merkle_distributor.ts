@@ -14,426 +14,6 @@ export type MerkleDistributor = {
   },
   "instructions": [
     {
-      "name": "claimLocked",
-      "discriminator": [
-        34,
-        206,
-        181,
-        23,
-        11,
-        207,
-        147,
-        90
-      ],
-      "accounts": [
-        {
-          "name": "distributor",
-          "docs": [
-            "The [MerkleDistributor]."
-          ],
-          "writable": true
-        },
-        {
-          "name": "claimStatus",
-          "docs": [
-            "Claim Status PDA"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  67,
-                  108,
-                  97,
-                  105,
-                  109,
-                  83,
-                  116,
-                  97,
-                  116,
-                  117,
-                  115
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "claimant"
-              },
-              {
-                "kind": "account",
-                "path": "distributor"
-              }
-            ]
-          }
-        },
-        {
-          "name": "from",
-          "docs": [
-            "Distributor ATA containing the tokens to distribute."
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "distributor"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "distributor.mint",
-                "account": "merkleDistributor"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "to",
-          "docs": [
-            "Account to send the claimed tokens to.",
-            "Claimant must sign the transaction and can only claim on behalf of themself"
-          ],
-          "writable": true
-        },
-        {
-          "name": "claimant",
-          "docs": [
-            "Who is claiming the tokens."
-          ],
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "tokenProgram",
-          "docs": [
-            "SPL [Token] program."
-          ],
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "clawback",
-      "discriminator": [
-        111,
-        92,
-        142,
-        79,
-        33,
-        234,
-        82,
-        27
-      ],
-      "accounts": [
-        {
-          "name": "distributor",
-          "docs": [
-            "The [MerkleDistributor]."
-          ],
-          "writable": true
-        },
-        {
-          "name": "from",
-          "docs": [
-            "Distributor ATA containing the tokens to distribute."
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "distributor"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "distributor.mint",
-                "account": "merkleDistributor"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "to",
-          "docs": [
-            "The Clawback token account."
-          ],
-          "writable": true
-        },
-        {
-          "name": "claimant",
-          "docs": [
-            "Claimant account",
-            "Anyone can claw back the funds"
-          ],
-          "signer": true
-        },
-        {
-          "name": "systemProgram",
-          "docs": [
-            "The [System] program."
-          ],
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "tokenProgram",
-          "docs": [
-            "SPL [Token] program."
-          ],
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "closeClaimStatus",
-      "docs": [
-        "only available in test phase"
-      ],
-      "discriminator": [
-        163,
-        214,
-        191,
-        165,
-        245,
-        188,
-        17,
-        185
-      ],
-      "accounts": [
-        {
-          "name": "claimStatus",
-          "writable": true
-        },
-        {
-          "name": "claimant",
-          "writable": true,
-          "relations": [
-            "claimStatus"
-          ]
-        },
-        {
-          "name": "admin",
-          "signer": true,
-          "relations": [
-            "claimStatus"
-          ]
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "closeDistributor",
-      "docs": [
-        "only available in test phase"
-      ],
-      "discriminator": [
-        202,
-        56,
-        180,
-        143,
-        46,
-        104,
-        106,
-        112
-      ],
-      "accounts": [
-        {
-          "name": "distributor",
-          "docs": [
-            "[MerkleDistributor]."
-          ],
-          "writable": true
-        },
-        {
-          "name": "tokenVault",
-          "docs": [
-            "Clawback receiver token account"
-          ],
-          "writable": true,
-          "relations": [
-            "distributor"
-          ]
-        },
-        {
-          "name": "admin",
-          "docs": [
-            "Admin wallet, responsible for creating the distributor and paying for the transaction.",
-            "Also has the authority to set the clawback receiver and change itself."
-          ],
-          "writable": true,
-          "signer": true,
-          "relations": [
-            "distributor"
-          ]
-        },
-        {
-          "name": "destinationTokenAccount",
-          "docs": [
-            "account receive token back"
-          ],
-          "writable": true
-        },
-        {
-          "name": "tokenProgram",
-          "docs": [
-            "The [Token] program."
-          ],
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "newClaim",
       "discriminator": [
         78,
@@ -452,41 +32,6 @@ export type MerkleDistributor = {
             "The [MerkleDistributor]."
           ],
           "writable": true
-        },
-        {
-          "name": "claimStatus",
-          "docs": [
-            "Claim status PDA"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  67,
-                  108,
-                  97,
-                  105,
-                  109,
-                  83,
-                  116,
-                  97,
-                  116,
-                  117,
-                  115
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "claimant"
-              },
-              {
-                "kind": "account",
-                "path": "distributor"
-              }
-            ]
-          }
         },
         {
           "name": "from",
@@ -603,16 +148,13 @@ export type MerkleDistributor = {
             "SPL [Token] program."
           ],
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        },
-        {
-          "name": "systemProgram",
-          "docs": [
-            "The [System] program."
-          ],
-          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
+        {
+          "name": "index",
+          "type": "u32"
+        },
         {
           "name": "amountUnlocked",
           "type": "u64"
@@ -1316,113 +858,113 @@ export type MerkleDistributor = {
   "errors": [
     {
       "code": 6000,
-      "name": "insufficientUnlockedTokens",
-      "msg": "Insufficient unlocked tokens"
-    },
-    {
-      "code": 6001,
       "name": "startTooFarInFuture",
       "msg": "Deposit Start too far in future"
     },
     {
-      "code": 6002,
+      "code": 6001,
       "name": "invalidProof",
       "msg": "Invalid Merkle proof."
     },
     {
-      "code": 6003,
+      "code": 6002,
       "name": "exceededMaxClaim",
       "msg": "Exceeded maximum claim amount"
     },
     {
-      "code": 6004,
+      "code": 6003,
       "name": "maxNodesExceeded",
       "msg": "Exceeded maximum node count"
     },
     {
-      "code": 6005,
+      "code": 6004,
       "name": "unauthorized",
       "msg": "Account is not authorized to execute this instruction"
     },
     {
-      "code": 6006,
+      "code": 6005,
       "name": "ownerMismatch",
       "msg": "Token account owner did not match intended owner"
     },
     {
-      "code": 6007,
+      "code": 6006,
       "name": "clawbackDuringVesting",
       "msg": "Clawback cannot be before vesting ends"
     },
     {
-      "code": 6008,
+      "code": 6007,
       "name": "clawbackBeforeStart",
       "msg": "Attempted clawback before start"
     },
     {
-      "code": 6009,
+      "code": 6008,
       "name": "clawbackAlreadyClaimed",
       "msg": "Clawback already claimed"
     },
     {
-      "code": 6010,
+      "code": 6009,
       "name": "insufficientClawbackDelay",
       "msg": "Clawback start must be at least one day after vesting end"
     },
     {
-      "code": 6011,
+      "code": 6010,
       "name": "sameClawbackReceiver",
       "msg": "New and old Clawback receivers are identical"
     },
     {
-      "code": 6012,
+      "code": 6011,
       "name": "sameAdmin",
       "msg": "New and old admin are identical"
     },
     {
-      "code": 6013,
+      "code": 6012,
       "name": "claimExpired",
       "msg": "Claim window expired"
     },
     {
-      "code": 6014,
+      "code": 6013,
       "name": "arithmeticError",
       "msg": "Arithmetic Error (overflow/underflow)"
     },
     {
-      "code": 6015,
+      "code": 6014,
       "name": "startTimestampAfterEnd",
       "msg": "Start Timestamp cannot be after end Timestamp"
     },
     {
-      "code": 6016,
+      "code": 6015,
       "name": "timestampsNotInFuture",
       "msg": "Timestamps cannot be in the past"
     },
     {
-      "code": 6017,
+      "code": 6016,
       "name": "invalidVersion",
       "msg": "Airdrop Version Mismatch"
     },
     {
-      "code": 6018,
+      "code": 6017,
       "name": "claimingIsNotStarted",
       "msg": "Claiming is not started"
     },
     {
-      "code": 6019,
+      "code": 6018,
       "name": "cannotCloseDistributor",
       "msg": "Cannot close distributor"
     },
     {
+      "code": 6019,
+      "name": "invalidActivationType",
+      "msg": "Invalid activation type"
+    },
+    {
       "code": 6020,
-      "name": "cannotCloseClaimStatus",
-      "msg": "Cannot close claim status"
+      "name": "indexOutOfRange",
+      "msg": "Claim index out of range"
     },
     {
       "code": 6021,
-      "name": "invalidActivationType",
-      "msg": "Invalid activation type"
+      "name": "alreadyClaimed",
+      "msg": "Already claimed"
     }
   ],
   "types": [
@@ -1448,59 +990,6 @@ export type MerkleDistributor = {
               "total bonus"
             ],
             "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "claimStatus",
-      "docs": [
-        "Holds whether or not a claimant has claimed tokens."
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "claimant",
-            "docs": [
-              "Authority that claimed the tokens."
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "lockedAmount",
-            "docs": [
-              "Locked amount"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "lockedAmountWithdrawn",
-            "docs": [
-              "Locked amount withdrawn"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "unlockedAmount",
-            "docs": [
-              "Unlocked amount"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "closable",
-            "docs": [
-              "indicate that whether admin can close this account, for testing purpose"
-            ],
-            "type": "bool"
-          },
-          {
-            "name": "admin",
-            "docs": [
-              "admin of merkle tree, store for for testing purpose"
-            ],
-            "type": "pubkey"
           }
         ]
       }

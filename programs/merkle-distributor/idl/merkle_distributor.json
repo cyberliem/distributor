@@ -359,34 +359,6 @@
       "args": []
     },
     {
-      "name": "closeClaimStatus",
-      "docs": [
-        "only available in test phase"
-      ],
-      "accounts": [
-        {
-          "name": "claimStatus",
-          "isMut": true,
-          "isSigner": false,
-          "relations": [
-            "claimant",
-            "admin"
-          ]
-        },
-        {
-          "name": "claimant",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "admin",
-          "isMut": false,
-          "isSigner": true
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "setEnableSlot",
       "accounts": [
         {
@@ -428,34 +400,6 @@
           ]
         },
         {
-          "name": "claimStatus",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "Claim status PDA"
-          ],
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "type": "string",
-                "value": "ClaimStatus"
-              },
-              {
-                "kind": "account",
-                "type": "publicKey",
-                "path": "claimant"
-              },
-              {
-                "kind": "account",
-                "type": "publicKey",
-                "account": "MerkleDistributor",
-                "path": "distributor"
-              }
-            ]
-          }
-        },
-        {
           "name": "from",
           "isMut": true,
           "isSigner": false,
@@ -486,17 +430,13 @@
           "docs": [
             "SPL [Token] program."
           ]
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "The [System] program."
-          ]
         }
       ],
       "args": [
+        {
+          "name": "index",
+          "type": "u32"
+        },
         {
           "name": "amountUnlocked",
           "type": "u64"
@@ -517,81 +457,6 @@
           }
         }
       ]
-    },
-    {
-      "name": "claimLocked",
-      "accounts": [
-        {
-          "name": "distributor",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "The [MerkleDistributor]."
-          ]
-        },
-        {
-          "name": "claimStatus",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "Claim Status PDA"
-          ],
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "type": "string",
-                "value": "ClaimStatus"
-              },
-              {
-                "kind": "account",
-                "type": "publicKey",
-                "path": "claimant"
-              },
-              {
-                "kind": "account",
-                "type": "publicKey",
-                "account": "MerkleDistributor",
-                "path": "distributor"
-              }
-            ]
-          }
-        },
-        {
-          "name": "from",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "Distributor ATA containing the tokens to distribute."
-          ]
-        },
-        {
-          "name": "to",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "Account to send the claimed tokens to.",
-            "Claimant must sign the transaction and can only claim on behalf of themself"
-          ]
-        },
-        {
-          "name": "claimant",
-          "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "Who is claiming the tokens."
-          ]
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "SPL [Token] program."
-          ]
-        }
-      ],
-      "args": []
     },
     {
       "name": "clawback",
@@ -710,59 +575,6 @@
     }
   ],
   "accounts": [
-    {
-      "name": "ClaimStatus",
-      "docs": [
-        "Holds whether or not a claimant has claimed tokens."
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "claimant",
-            "docs": [
-              "Authority that claimed the tokens."
-            ],
-            "type": "publicKey"
-          },
-          {
-            "name": "lockedAmount",
-            "docs": [
-              "Locked amount"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "lockedAmountWithdrawn",
-            "docs": [
-              "Locked amount withdrawn"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "unlockedAmount",
-            "docs": [
-              "Unlocked amount"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "closable",
-            "docs": [
-              "indicate that whether admin can close this account, for testing purpose"
-            ],
-            "type": "bool"
-          },
-          {
-            "name": "admin",
-            "docs": [
-              "admin of merkle tree, store for for testing purpose"
-            ],
-            "type": "publicKey"
-          }
-        ]
-      }
-    },
     {
       "name": "MerkleDistributor",
       "docs": [
@@ -1013,11 +825,6 @@
   ],
   "errors": [
     {
-      "code": 6000,
-      "name": "InsufficientUnlockedTokens",
-      "msg": "Insufficient unlocked tokens"
-    },
-    {
       "code": 6001,
       "name": "StartTooFarInFuture",
       "msg": "Deposit Start too far in future"
@@ -1113,9 +920,19 @@
       "msg": "Cannot close distributor"
     },
     {
+      "code": 6019,
+      "name": "InvalidActivationType",
+      "msg": "Invalid activation type"
+    },
+    {
       "code": 6020,
-      "name": "CannotCloseClaimStatus",
-      "msg": "Cannot close claim status"
+      "name": "IndexOutOfRange",
+      "msg": "Claim index out of range"
+    },
+    {
+      "code": 6021,
+      "name": "AlreadyClaimed",
+      "msg": "Already claimed"
     }
   ]
 }
