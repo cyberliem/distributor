@@ -9,11 +9,7 @@ use jito_merkle_verify::verify;
 
 use crate::{
     error::ErrorCode,
-    math::SafeMath,
-    state::{
-        claim_status::ClaimStatus, claimed_event::NewClaimEvent,
-        merkle_distributor::MerkleDistributor,
-    },
+    state::{claimed_event::NewClaimEvent, merkle_distributor::MerkleDistributor},
 };
 
 // We need to discern between leaf and intermediate nodes to prevent trivial second
@@ -27,9 +23,6 @@ pub struct NewClaim<'info> {
     /// The [MerkleDistributor].
     #[account(mut)]
     pub distributor: Account<'info, MerkleDistributor>,
-    // REMOVED: Claim status PDA (no per-claimer account)
-    // #[account(…)]
-    // pub claim_status: AccountLoader<'info, ClaimStatus>,
     /// Distributor ATA containing the tokens to distribute.
     #[account(
         mut,
@@ -59,8 +52,8 @@ pub struct NewClaim<'info> {
 /// 1. Increments num_nodes_claimed by 1
 /// 2. Verifies proof (leaf commits to claimant, index, amounts)
 /// 3. Marks index as claimed in distributor.claimed_bitmap///
-/// 4. Transfers claim_status.unlocked_amount to the claimant
-/// 5. Increments total_amount_claimed by claim_status.unlocked_amount
+    /// 4. Transfers the unlocked amount (plus bonus) to the claimant
+    /// 5. Increments total_amount_claimed by the transferred amount
 /// CHECK:
 ///     1. The claim window has not expired and the distributor has not been clawed back
 ///     2. The claimant is the owner of the to account
@@ -81,16 +74,6 @@ pub fn handle_new_claim(
 
     let activation_handler = distributor.get_activation_handler()?;
     activation_handler.validate_claim()?;
-
-    distributor.num_nodes_claimed = distributor
-        .num_nodes_claimed
-        .checked_add(1)
-        .ok_or(ErrorCode::ArithmeticError)?;
-
-    require!(
-        distributor.num_nodes_claimed <= distributor.max_num_nodes,
-        ErrorCode::MaxNodesExceeded
-    );
 
     // Index / bitmap checks
     require!(

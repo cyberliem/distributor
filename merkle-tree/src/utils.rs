@@ -49,21 +49,6 @@ pub fn get_merkle_distributor_pda(
     )
 }
 
-pub fn get_claim_status_pda(
-    program_id: &Pubkey,
-    claimant: &Pubkey,
-    distributor: &Pubkey,
-) -> (Pubkey, u8) {
-    Pubkey::find_program_address(
-        &[
-            b"ClaimStatus".as_ref(),
-            claimant.to_bytes().as_ref(),
-            distributor.to_bytes().as_ref(),
-        ],
-        program_id,
-    )
-}
-
 #[derive(Debug)]
 pub struct MerkleValidationError {
     pub msg: String,

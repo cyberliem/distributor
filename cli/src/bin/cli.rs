@@ -30,7 +30,7 @@ use csv::Writer;
 use jito_merkle_tree::{
     airdrop_merkle_tree::AirdropMerkleTree,
     csv_entry::CsvEntry,
-    utils::{get_claim_status_pda, get_merkle_distributor_pda},
+    utils::get_merkle_distributor_pda,
 };
 use merkle_distributor::state::merkle_distributor::MerkleDistributor;
 
@@ -95,7 +95,6 @@ pub enum Commands {
     NewDistributorWithBonus(NewDistributorWithBonusArgs),
 
     CloseDistributor(CloseDistributorArgs),
-    CloseClaimStatus(CloseClaimStatusArgs),
     /// Clawback tokens from merkle distributor
     #[clap(hide = true)]
     Clawback(ClawbackArgs),
@@ -120,10 +119,7 @@ pub enum Commands {
     GenerateKvProof(GenerateKvProofArgs),
     MassSend(MassSendArgs),
     Resend(ResendSendArgs),
-    ViewClaimStatus(ViewClaimStatusArgs),
-
     VerifyKvProof(VerifyKvProofArgs),
-    TotalClaim(TotalClaimAgrs),
 
     SetClawbackReceiver(ClawbackReceiverArgs),
 
@@ -140,8 +136,6 @@ pub struct CloseDistributorArgs {
     pub airdrop_version: Option<u64>,
 }
 
-#[derive(Parser, Debug)]
-pub struct CloseClaimStatusArgs {}
 // NewClaim and Claim subcommand args
 #[derive(Parser, Debug)]
 pub struct ClaimArgs {
@@ -493,9 +487,6 @@ pub struct ResendSendArgs {
 }
 
 #[derive(Parser, Debug)]
-pub struct ViewClaimStatusArgs {}
-
-#[derive(Parser, Debug)]
 pub struct VerifyKvProofArgs {
     /// list of all user and allocation
     #[clap(long, env)]
@@ -509,12 +500,6 @@ pub struct VerifyKvProofArgs {
     /// number of entries to verify
     #[clap(long, env)]
     pub num_verify: u64,
-}
-
-#[derive(Parser, Debug)]
-pub struct TotalClaimAgrs {
-    #[clap(long, env)]
-    pub num_tree: u64,
 }
 
 #[derive(Parser, Debug)]
@@ -554,7 +539,7 @@ fn main() {
             process_close_distributor(&args, close_distributor_args);
         }
         Commands::Claim(claim_args) => {
-            process_claim(&args, claim_args);
+            process_new_claim(&args, claim_args);
         }
         Commands::ClaimFromApi(claim_args) => {
             process_claim_from_api(&args, claim_args);
@@ -596,9 +581,6 @@ fn main() {
         Commands::SlotByTime(slot_by_time_args) => {
             process_get_slot(&args, slot_by_time_args);
         }
-        Commands::CloseClaimStatus(_args) => {
-            process_close_claim_status(&args);
-        }
         Commands::FilterAndMergeList(filter_and_merge_list_args) => {
             process_filter_and_merge(filter_and_merge_list_args);
         }
@@ -607,9 +589,7 @@ fn main() {
         }
         Commands::MassSend(mass_send_args) => process_mass_send(&args, mass_send_args),
         Commands::Resend(re_send_args) => process_resend(&args, re_send_args),
-        Commands::ViewClaimStatus(_view_claim_status_args) => view_claim_status(&args),
         Commands::VerifyKvProof(verify_kv_proof_args) => verify_kv_proof(verify_kv_proof_args),
-        Commands::TotalClaim(total_claim_argrs) => get_total_claim(&args, total_claim_argrs),
         Commands::ViewDistributors(view_distributors_args) => {
             view_distributors(&args, view_distributors_args)
         }
