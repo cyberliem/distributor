@@ -22,6 +22,8 @@ use crate::{
 // proof struct
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserProof {
+    /// Unique index in the merkle tree (bitmap bit position)
+    pub index: u32,
     /// merkle tree that user belongs
     pub merkle_tree: String,
     /// unlocked amount
@@ -76,12 +78,19 @@ impl AirdropMerkleTree {
                 .or_insert_with(|| tree_node); // If not exists, insert a new entry
         }
 
-        // Convert IndexMap back to Vec while preserving the order
+        // Convert back to Vec (order preserved) and set final indices
+
         let mut tree_nodes: Vec<TreeNode> = tree_nodes_map.values().cloned().collect();
 
+        // the new indices might take over from the combination. Set it to the main tree for correct proof
+        for (i, n) in tree_nodes.iter_mut().enumerate() {
+            n.index = i as u32;
+        }
+
+        // Hash AFTER indices are set
         let hashed_nodes = tree_nodes
             .iter()
-            .map(|claim_info| claim_info.hash().to_bytes())
+            .map(|n| n.hash().to_bytes())
             .collect::<Vec<_>>();
 
         let tree = MerkleTree::new(&hashed_nodes[..], true);
@@ -117,10 +126,10 @@ impl AirdropMerkleTree {
         let csv_entries = CsvEntry::new_from_file(path)?;
         let tree_nodes: Vec<TreeNode> = csv_entries
             .into_iter()
-            .map(|x| TreeNode::from_csv(x, decimals))
+            .enumerate()
+            .map(|(i, x)| TreeNode::from_csv(x, decimals, i as u32))   // <-- pass index
             .collect();
-        let tree = Self::new(tree_nodes, version)?;
-        Ok(tree)
+        Self::new(tree_nodes, version)
     }
 
     pub fn new_from_entries(
@@ -130,10 +139,10 @@ impl AirdropMerkleTree {
     ) -> Result<Self> {
         let tree_nodes: Vec<TreeNode> = csv_entries
             .into_iter()
-            .map(|x| TreeNode::from_csv(x, decimals))
+            .enumerate()
+            .map(|(i, x)| TreeNode::from_csv(x, decimals, i as u32))   // <-- pass index
             .collect();
-        let tree = Self::new(tree_nodes, version)?;
-        Ok(tree)
+        Self::new(tree_nodes, version)
     }
 
     /// Load a serialized merkle tree from file path
@@ -286,9 +295,10 @@ mod tests {
             rand::random::<u64>() % 100 * u64::pow(10, 9)
         }
 
-        for _ in 0..num_nodes {
+        for i in 0..num_nodes {
             // choose amount unlocked and amount locked as a random u64 between 0 and 100
             tree_nodes.push(TreeNode {
+                index: i as u32,
                 claimant: new_test_key(),
                 amount: rand_balance(),
                 locked_amount: rand_balance(),
@@ -304,6 +314,7 @@ mod tests {
     #[test]
     fn test_verify_new_merkle_tree() {
         let tree_nodes = vec![TreeNode {
+            index: 0,
             claimant: Pubkey::default(),
             amount: 2,
             locked_amount: 0,
@@ -318,18 +329,21 @@ mod tests {
         // create a merkle root from 3 tree nodes and write it to file, then read it
         let tree_nodes = vec![
             TreeNode {
+                index: 0,
                 claimant: pubkey!("FLYqJsmJ5AGMxMxK3Qy1rSen4ES2dqqo6h51W3C1tYS"),
                 amount: (100 * u64::pow(10, 9)),
                 locked_amount: 0,
                 proof: None,
             },
             TreeNode {
+                index: 1,
                 claimant: pubkey!("EDGARWktv3nDxRYjufjdbZmryqGXceaFPoPpbUzdpqED"),
                 amount: (100 * u64::pow(10, 9)),
                 locked_amount: 0,
                 proof: None,
             },
             TreeNode {
+                index: 2,
                 claimant: pubkey!("EDGARWktv3nDxRYjufjdbZmryqGXceaFPoPpbUzdpqEH"),
                 amount: (100 * u64::pow(10, 9)),
                 locked_amount: 1,
@@ -360,18 +374,21 @@ mod tests {
         let duplicate_pubkey = Pubkey::new_unique();
         let tree_nodes = vec![
             TreeNode {
+                index: 0,                           // indices here are placeholders
                 claimant: duplicate_pubkey,
                 amount: 10,
                 locked_amount: 10,
                 proof: None,
             },
             TreeNode {
+                index: 1,                           // since there is duplication, it will be reassigned
                 claimant: duplicate_pubkey,
                 amount: 1,
                 locked_amount: 10,
                 proof: None,
             },
             TreeNode {
+                index: 2,
                 claimant: Pubkey::new_unique(),
                 amount: 0,
                 locked_amount: 10,

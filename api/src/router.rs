@@ -88,6 +88,7 @@ async fn get_user_info(
         .ok_or(ApiError::UserNotFound(user_pubkey.to_string()))?;
 
     let proof = UserProof {
+        index: node.1.index,
         merkle_tree: node.0.to_string(),
         amount: node.1.unlocked_amount(),
         locked_amount: node.1.locked_amount(),

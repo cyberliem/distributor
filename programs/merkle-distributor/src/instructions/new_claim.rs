@@ -1,6 +1,5 @@
 use anchor_lang::{
-    context::Context, prelude::*, solana_program::hash::hashv, system_program::System, Accounts,
-    Key, Result,
+    context::Context, prelude::*, solana_program::hash::hashv, Accounts, Key, Result,
 };
 use anchor_spl::{
     token,
@@ -28,21 +27,9 @@ pub struct NewClaim<'info> {
     /// The [MerkleDistributor].
     #[account(mut)]
     pub distributor: Account<'info, MerkleDistributor>,
-
-    /// Claim status PDA
-    #[account(
-        init,
-        seeds = [
-            b"ClaimStatus".as_ref(),
-            claimant.key().to_bytes().as_ref(),
-            distributor.key().to_bytes().as_ref()
-        ],
-        bump,
-        space = ClaimStatus::LEN,
-        payer = claimant
-    )]
-    pub claim_status: Account<'info, ClaimStatus>,
-
+    // REMOVED: Claim status PDA (no per-claimer account)
+    // #[account(…)]
+    // pub claim_status: AccountLoader<'info, ClaimStatus>,
     /// Distributor ATA containing the tokens to distribute.
     #[account(
         mut,
@@ -66,16 +53,14 @@ pub struct NewClaim<'info> {
 
     /// SPL [Token] program.
     pub token_program: Program<'info, Token>,
-
-    /// The [System] program.
-    pub system_program: Program<'info, System>,
 }
 
 /// Initializes a new claim from the [MerkleDistributor].
 /// 1. Increments num_nodes_claimed by 1
-/// 2. Initializes claim_status
-/// 3. Transfers claim_status.unlocked_amount to the claimant
-/// 4. Increments total_amount_claimed by claim_status.unlocked_amount
+/// 2. Verifies proof (leaf commits to claimant, index, amounts)
+/// 3. Marks index as claimed in distributor.claimed_bitmap///
+/// 4. Transfers claim_status.unlocked_amount to the claimant
+/// 5. Increments total_amount_claimed by claim_status.unlocked_amount
 /// CHECK:
 ///     1. The claim window has not expired and the distributor has not been clawed back
 ///     2. The claimant is the owner of the to account
@@ -84,10 +69,12 @@ pub struct NewClaim<'info> {
 #[allow(clippy::result_large_err)]
 pub fn handle_new_claim(
     ctx: Context<NewClaim>,
+    index: u32, // NEW: leaf index for bitmap
     amount_unlocked: u64,
     amount_locked: u64,
     proof: Vec<[u8; 32]>,
 ) -> Result<()> {
+    let bump = ctx.accounts.distributor.bump;
     let distributor = &mut ctx.accounts.distributor;
 
     require!(!distributor.clawed_back, ErrorCode::ClaimExpired);
@@ -105,31 +92,34 @@ pub fn handle_new_claim(
         ErrorCode::MaxNodesExceeded
     );
 
+    // Index / bitmap checks
+    require!(
+        (index as u64) < distributor.max_num_nodes,
+        ErrorCode::IndexOutOfRange
+    );
+    require!(
+        !distributor.claimed_bitmap.is_set(index),
+        ErrorCode::AlreadyClaimed
+    );
+
     let claimant_account = &ctx.accounts.claimant;
 
-    // Verify the merkle proof.
-    let node = hashv(&[
+    // Construct leaf: include index to bind the unique slot in the bitmap.
+    // Format: hash( LEAF_PREFIX || claimant || index_be || amount_unlocked_be || amount_locked_be )
+    let node_inner = hashv(&[
         &claimant_account.key().to_bytes(),
-        &amount_unlocked.to_le_bytes(),
-        &amount_locked.to_le_bytes(),
+        &index.to_be_bytes(),
+        &amount_unlocked.to_be_bytes(),
+        &amount_locked.to_be_bytes(),
     ]);
 
-    let distributor = &ctx.accounts.distributor;
-    let node = hashv(&[LEAF_PREFIX, &node.to_bytes()]);
+    let node = hashv(&[LEAF_PREFIX, &node_inner.to_bytes()]);
 
+    // Verify the merkle proof.
     require!(
         verify(proof, distributor.root, node.to_bytes()),
         ErrorCode::InvalidProof
     );
-
-    let claim_status = &mut ctx.accounts.claim_status;
-
-    // Seed initial values
-    claim_status.claimant = claimant_account.key();
-    claim_status.locked_amount = amount_locked;
-    claim_status.locked_amount_withdrawn = 0;
-    claim_status.closable = distributor.closable;
-    claim_status.admin = distributor.admin;
 
     let unlocked_amount = amount_unlocked;
     let seeds = [
@@ -137,27 +127,29 @@ pub fn handle_new_claim(
         &distributor.base.to_bytes(),
         &distributor.mint.to_bytes(),
         &distributor.version.to_le_bytes(),
-        &[ctx.accounts.distributor.bump],
+        &[bump],
     ];
 
     let bonus = distributor.get_bonus_for_a_claimaint(unlocked_amount, &activation_handler)?;
-    claim_status.unlocked_amount = unlocked_amount.safe_add(bonus)?;
-    token::transfer(
-        CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            token::Transfer {
-                from: ctx.accounts.from.to_account_info(),
-                to: ctx.accounts.to.to_account_info(),
-                authority: ctx.accounts.distributor.to_account_info(),
-            },
-        )
-        .with_signer(&[&seeds[..]]),
-        claim_status.unlocked_amount,
-    )?;
-    let distributor = &mut ctx.accounts.distributor;
+    let amount_with_bonus = amount_unlocked
+        .checked_add(bonus)
+        .ok_or(ErrorCode::ArithmeticError)?;
+    // State updates BEFORE transfer (prevent races)
+    distributor.claimed_bitmap.set(index);
+    distributor.num_nodes_claimed = distributor
+        .num_nodes_claimed
+        .checked_add(1)
+        .ok_or(ErrorCode::ArithmeticError)?;
+
+    require!(
+        distributor.num_nodes_claimed <= distributor.max_num_nodes,
+        ErrorCode::MaxNodesExceeded
+    );
+
+
     distributor.total_amount_claimed = distributor
         .total_amount_claimed
-        .checked_add(claim_status.unlocked_amount)
+        .checked_add(amount_with_bonus)
         .ok_or(ErrorCode::ArithmeticError)?;
 
     distributor.accumulate_bonus(bonus)?;
@@ -169,15 +161,29 @@ pub fn handle_new_claim(
 
     // Note: might get truncated, do not rely on
     msg!(
-        "Created new claim with locked {}, unlocked {} and bonus {} with lockup start:{} end:{}, activation_point {} current_point {}",
-        claim_status.locked_amount,
-        unlocked_amount,
+     "Created new claim idx:{} locked {} unlocked {} bonus {} lockup start:{} end:{}, activation_point {} current_point {}",
+        index,
+        amount_locked,
+        amount_unlocked,
         bonus,
         distributor.start_ts,
         distributor.end_ts,
         activation_handler.activation_point,
         activation_handler.curr_point,
     );
+
+    token::transfer(
+        CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            token::Transfer {
+                from: ctx.accounts.from.to_account_info(),
+                to: ctx.accounts.to.to_account_info(),
+                authority: ctx.accounts.distributor.to_account_info(),
+            },
+        )
+            .with_signer(&[&seeds[..]]),
+        amount_with_bonus,
+    )?;
 
     emit!(NewClaimEvent {
         claimant: claimant_account.key(),

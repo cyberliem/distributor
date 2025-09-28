@@ -19,10 +19,11 @@ pub fn process_new_claim(args: &Args, claim_args: &ClaimArgs) {
         merkle_tree.airdrop_version,
     );
 
-    // Get user's node in claim
+    // Get user's node in claim (must include index in your new tree)
     let node = merkle_tree.get_node(&claimant);
 
-    let (claim_status_pda, _bump) = get_claim_status_pda(&args.program_id, &claimant, &distributor);
+    // OLD (bitmap removes claim_status PDA): removed
+    // let (claim_status_pda, _bump) = get_claim_status_pda(&args.program_id, &claimant, &distributor);
 
     let client = RpcClient::new_with_commitment(&args.rpc_url, CommitmentConfig::confirmed());
 
@@ -30,19 +31,17 @@ pub fn process_new_claim(args: &Args, claim_args: &ClaimArgs) {
 
     let mut ixs = vec![];
 
-    // check priority fee
+    // optional priority fee
     if let Some(priority_fee) = args.priority_fee {
-        ixs.push(ComputeBudgetInstruction::set_compute_unit_price(
-            priority_fee,
-        ));
+        ixs.push(ComputeBudgetInstruction::set_compute_unit_price(priority_fee));
     }
 
+    // ensure claimant ATA exists
     match client.get_account(&claimant_ata) {
         Ok(_) => {}
         Err(e) => {
-            // TODO: directly pattern match on error kind
             if e.to_string().contains("AccountNotFound") {
-                println!("PDA does not exist. creating.");
+                println!("ATA does not exist. creating.");
                 ixs.push(create_associated_token_account(
                     &claimant,
                     &claimant,
@@ -50,29 +49,31 @@ pub fn process_new_claim(args: &Args, claim_args: &ClaimArgs) {
                     &token::ID,
                 ));
             } else {
-                panic!("Error fetching PDA: {e}")
+                panic!("Error fetching ATA: {e}")
             }
         }
     }
 
+    // ---- NEW: bitmap claim (no claim_status), include index in ix data ----
     ixs.push(Instruction {
         program_id: args.program_id,
         accounts: merkle_distributor::accounts::NewClaim {
             distributor,
-            claim_status: claim_status_pda,
+            // claim_status: claim_status_pda,   // REMOVED
             from: get_associated_token_address(&distributor, &args.mint),
             to: claimant_ata,
             claimant,
             token_program: token::ID,
-            system_program: solana_program::system_program::ID,
         }
-        .to_account_metas(None),
+            .to_account_metas(None),
         data: merkle_distributor::instruction::NewClaim {
+            // NEW FIELD:
+            index: node.index, // <-- u32 index bound into leaf & bitmap
             amount_unlocked: node.unlocked_amount(),
             amount_locked: node.locked_amount(),
             proof: node.proof.expect("proof not found"),
         }
-        .data(),
+            .data(),
     });
 
     let blockhash = client.get_latest_blockhash().unwrap();
